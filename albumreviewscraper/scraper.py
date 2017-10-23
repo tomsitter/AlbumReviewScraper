@@ -2,13 +2,17 @@
 
 from bs4 import BeautifulSoup
 import requests
+import sys
+
+if sys.version_info[0] < 3:
+    raise Exception("Python 3 or a more recent version is required.")
 
 urls = {
     "exclaim": "http://exclaim.ca/music/reviews",
     "rollingstone": "",
 }
 
-def main(site):
+def main(site, output=None):
     """Main entry to script from command line"""
     url = urls[site]
     for review_url in find_review_urls(url, site):
@@ -23,9 +27,9 @@ class Review:
         self.review = review or ""
         
 
-def parse_album_review(url):
+def parse_album_review(url, site):
     r = requests.get(url)
-    
+
 
 def find_review_urls(url, site):
     r = requests.get(url)
@@ -46,7 +50,14 @@ def article_finder(soup, site):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--site", help="The site to scrape for reviews. Choices: exclaim, rollingstone")
+    parser.add_argument("-s", "--site", 
+                        help="The site to scrape for reviews. Choices: exclaim, rollingstone",
+                        required=True)
+    parser.add_argument("-o", "--output", 
+                        help="The file to output CSV results to.")
     args = parser.parse_args()
 
-    main(args.site)
+    if args.site:
+        main(args.site, args.output)
+    else:
+        raise ValueError("Missing site name for scraping")

@@ -1,8 +1,9 @@
-from setuptools import setup
+from distutils.core import setup
 
 setup(
     name='albumreviewscraper',
-    packages=['albumreviewscraper'],
+    packages=['AlbumReviewScraper'],
+    version="0.1",
     include_package_data=True,
     install_requires=[
         'requests',
