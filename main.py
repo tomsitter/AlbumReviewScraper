@@ -3,13 +3,16 @@
 from bs4 import BeautifulSoup
 import requests
 
-sites = [
-    "http://exclaim.ca/music/reviews"
-]
+urls = {
+    "exclaim": "http://exclaim.ca/music/reviews",
+    "rollingstone": "",
+}
 
-def main(argv):
+def main(site):
     """Main entry to script from command line"""
-    pass
+    url = urls[site]
+    for review_url in find_review_urls(url, site):
+        print(review_url)
 
 class Review:
     """Holds review data and can be serialized to CSV row"""
@@ -24,23 +27,26 @@ def parse_album_review(url):
     r = requests.get(url)
     
 
-def find_review_urls(url, site_parser):
+def find_review_urls(url, site):
     r = requests.get(url)
     soup = BeautifulSoup(r.content, "html.parser")
-    for article in site_parser(soup):
+    for article in article_finder(soup, site):
         yield article.find("a").get("href")
 
 
-def find_exclaim_review_urls(soup):
-    """returns links to all Exclaim album reviews on review page"""
-    yield soup.find_all("li", {"class" : "streamSingle-item"})
-
-
-def find_rollingstone_review_urls(soup):
-    """returns links to all Rolling Stone album reviews"""
-    pass
+def article_finder(soup, site):
+    if site == 'exclaim':
+        yield from soup.find_all("li", {"class" : "streamSingle-item"})
+    elif site == 'rollingstone':
+        raise NotImplementedError()
+    else:
+        raise ValueError("Unknown site: ", site)
 
 
 if __name__ == "__main__":
-    import sys
-    main(sys.argv[1:])
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--site", help="The site to scrape for reviews. Choices: exclaim, rollingstone")
+    args = parser.parse_args()
+
+    main(args.site)
