@@ -17,6 +17,8 @@ def main(site, output=None):
     url = urls[site]
     for review_url in find_review_urls(url, site):
         print(review_url)
+        r = requests.get(review_url)
+        date, artist, album, review = parse_album_review(r.content)
 
 class Review:
     """Holds review data and can be serialized to CSV row"""
@@ -28,9 +30,15 @@ class Review:
         
 
 def parse_album_review(url, site):
-    r = requests.get(url)
-
-
+    """Return date, artist, album, and body of review for page"""
+    if site == "exclaim":
+        # artist = article-title
+        # album = article-subtitle
+        # date = article-published "Published Oct 23, 2017"
+        # body = *not wrapped in anything*
+        pass
+        
+        
 def find_review_urls(url, site):
     r = requests.get(url)
     soup = BeautifulSoup(r.content, "html.parser")
