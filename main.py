@@ -3,6 +3,10 @@
 from bs4 import BeautifulSoup
 import requests
 
+sites = [
+    "http://exclaim.ca/music/reviews"
+]
+
 def main(argv):
     """Main entry to script from command line"""
     pass
@@ -14,10 +18,7 @@ class Review:
         self.artist = artist or ""
         self.album = album or ""
         self.review = review or ""
-
-sites = [
-    "http://exclaim.ca/music/reviews"
-]
+        
 
 def parse_album_review(url):
     r = requests.get(url)
