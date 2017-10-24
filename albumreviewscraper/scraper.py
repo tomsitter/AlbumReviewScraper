@@ -1,6 +1,7 @@
 """ Album Review Web Scraper in Python 3.6 with BeautifulSoup and Requests"""
 
 from bs4 import BeautifulSoup
+from bs4.element import Comment
 import requests
 import sys
 
@@ -9,8 +10,8 @@ if sys.version_info[0] < 3:
 
 
 class Review:
-    """Holds review data 
-        Noy yet in use 
+    """Holds review data
+        Noy yet in use
     """
     def __init__(self, date, artist, album, review):
         self.date = date or ""
@@ -35,23 +36,31 @@ def main(site, output=None):
         review = requests.get(review_url).content
         date, artist, album, review = parse_album_review(review, site)
         # output review to file
-        
+
+def tag_visible(element):
+    if element.parent.name in ['style', 'script', 'head', 'title', 'meta', '[document]']:
+        return False
+    if isinstance(element, Comment):
+        return False
+    return True
 
 def parse_album_review(content, site):
     """Return date, artist, album, and body of review for page"""
     soup = BeautifulSoup(content, "html.parser")
+
     if site == "exclaim":
-        # artist = article-title
-        # album = article-subtitle
-        # date = article-published "Published Oct 23, 2017"
-        # body = *not wrapped in anything*
-        date, artist, album, review = "", "", "", ""
-        raise NotImplementedError("Exclaim! is not yet supported")
+        artist = soup.find("span", {"class": "article-title"}).get_text()
+        album = soup.find("span", {"class": "article-subtitle"}).get_text()
+        date = soup.find("div", {"class": "article-published"}).get_text()
+        texts = soup.findAll(text=True)
+        review = filter(tag_visible, texts) # More filtering required still
+        return date, artist, album, review
+
     elif site == "rollingstone":
 
         # date will need to be further processed
         date = soup.find("time", {"class": "content-published-date"}).get_text()
-        
+
         # title does not hold artist and album in structured way
         title = soup.find("h1", {"class": "content-title"}).get_text()
         if ":" in title:
@@ -60,15 +69,15 @@ def parse_album_review(content, site):
             artist, album = title, "parse error"
 
         # Reviews are nested <p> in the article-content <div>
-        review = "\n".join([p.get_text() 
-                            for p in 
+        review = "\n".join([p.get_text()
+                            for p in
                             soup.find("div", {"class": "article-content"}).find_all("p")])
         if not review:
             review = "None found"
 
     return date, artist, album, review
-        
-        
+
+
 def find_review_urls(url, site):
     """Download URL and search it for album review urls based on the site"""
     content = requests.get(url).content
@@ -77,7 +86,7 @@ def find_review_urls(url, site):
 
 
 def url_finder(content, site):
-    """Given the contents of a page listing album reviews, 
+    """Given the contents of a page listing album reviews,
        parse it with BeautifulSoup and return URLs to album reviews"""
     soup = BeautifulSoup(content, "html.parser")
     if site == 'exclaim':
@@ -87,19 +96,19 @@ def url_finder(content, site):
     elif site == 'rollingstone':
         for article in soup.find_all("a", {"class": "content-card-link"}):
             yield article.get("href")
-            
+
     else:
         raise ValueError("Unknown site: ", site)
-        
+
 
 if __name__ == "__main__":
     """ Parse command line arguments and call main()"""
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--site", 
+    parser.add_argument("-s", "--site",
                         help="The site to scrape for reviews. Choices: exclaim, rollingstone",
                         required=True)
-    parser.add_argument("-o", "--output", 
+    parser.add_argument("-o", "--output",
                         help="The file to output CSV results to.")
     args = parser.parse_args()
 
