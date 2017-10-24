@@ -1,7 +1,7 @@
 A webscraper for album reviews written in Python
 
 Installation:
-- Clone the git repository
+- git clone https://github.com/tomsitter/AlbumReviewScraper.git
 - cd albumreviewscraper
 - pip install --editable .
 
