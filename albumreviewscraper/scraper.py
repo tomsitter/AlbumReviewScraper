@@ -9,7 +9,7 @@ if sys.version_info[0] < 3:
 
 urls = {
     "exclaim": "http://exclaim.ca/music/reviews",
-    "rollingstone": "",
+    "rollingstone": "http://www.rollingstone.com/music/albumreviews",
 }
 
 def main(site, output=None):
@@ -18,7 +18,9 @@ def main(site, output=None):
     for review_url in find_review_urls(url, site):
         print(review_url)
         r = requests.get(review_url)
-        date, artist, album, review = parse_album_review(r.content)
+        date, artist, album, review = parse_album_review(r.content, site)
+        print(review)
+
 
 class Review:
     """Holds review data and can be serialized to CSV row"""
@@ -29,31 +31,49 @@ class Review:
         self.review = review or ""
         
 
-def parse_album_review(url, site):
+def parse_album_review(content, site):
     """Return date, artist, album, and body of review for page"""
+    soup = BeautifulSoup(content, "html.parser")
     if site == "exclaim":
         # artist = article-title
         # album = article-subtitle
         # date = article-published "Published Oct 23, 2017"
         # body = *not wrapped in anything*
-        pass
+        date, artist, album, review = "Ex", "cl", "a", "im"
+    elif site == "rollingstone":
+        date = soup.find("time", {"class": "content-published-date"}).get_text()
+        title = soup.find("h1", {"class": "content-title"}).get_text()
+        if title:
+            print("Title: ", title)
+            artist, album = title.split(": ")
+        else:
+            artist, album = "None found", "None found"
+        review = soup.find("div", {"class": "article-content"})
+        import pdb
+        pdb.set_trace()
+        if not review:
+            review = "None found"
+
+    return date, artist, album, review
         
         
 def find_review_urls(url, site):
     r = requests.get(url)
     soup = BeautifulSoup(r.content, "html.parser")
-    for article in article_finder(soup, site):
-        yield article.find("a").get("href")
+    for review_url in url_finder(soup, site):
+        yield review_url
 
 
-def article_finder(soup, site):
+def url_finder(soup, site):
     if site == 'exclaim':
-        yield from soup.find_all("li", {"class" : "streamSingle-item"})
+        for article in soup.find_all("li", {"class" : "streamSingle-item"}):
+            yield article.find("a").get("href")
     elif site == 'rollingstone':
-        raise NotImplementedError()
+        for article in soup.find_all("a", {"class": "content-card-link"}):
+            yield article.get("href")
     else:
         raise ValueError("Unknown site: ", site)
-
+        
 
 if __name__ == "__main__":
     import argparse
