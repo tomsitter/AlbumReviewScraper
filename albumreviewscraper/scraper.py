@@ -48,7 +48,7 @@ def parse_album_review(content, site):
             artist, album = title.split(": ")
         else:
             artist, album = "None found", "None found"
-        review = soup.find("div", {"class": "article-content"})
+        review = "\n".join([p.get_text() for p in soup.find("div", {"class": "article-content"}).find_all("p")])
         import pdb
         pdb.set_trace()
         if not review:
