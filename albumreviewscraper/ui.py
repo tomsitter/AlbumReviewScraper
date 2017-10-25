@@ -1,4 +1,11 @@
-"""Functions used for command line interface"""
+"""Functions used for command line interface
+Can print a list of Review objects to the terminal or to a CSV file
+Simply pass a list of Review objects to ask_for_input() 
+
+reviews = [review1, review2, ...]
+ask_for_input(reviews)
+
+"""
 
 import csv
 import sys

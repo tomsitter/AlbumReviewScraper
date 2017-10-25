@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 import requests
 import dateparser
 
+import re
+
 from Review import Review
 
 def parse_album_review(text, site):
@@ -57,6 +59,8 @@ def find_review_urls(url, site):
     for review_url in url_finder(text, site):
         yield review_url
 
+    yield find_review_urls(next_page(url), site)
+
     # find next page
 
 
@@ -75,3 +79,17 @@ def url_finder(text, site):
 
     else:
         raise ValueError("Unknown site: ", site)
+
+
+def next_page(url, site):
+    """Given a URL for a page of album reviews, return the next page"""
+    if site == 'exclaim':
+        raise NotImplementedError()
+    elif site == 'rollingstone':
+        current_page = re.search('page=(\d+)$', url)
+        if not current_page:
+            return url + '?page=2'
+        else:
+            page_number = current_page.groups()[0]
+            page_digits = len(page_number)
+            return url[:-page_digits] + str(int(page_number) + 1)
