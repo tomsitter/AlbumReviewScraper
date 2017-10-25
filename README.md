@@ -7,5 +7,6 @@ Installation:
 
 Running:
 
-python scraper.py --site exclaim
-python scraper.py --site rollingstone
+python main.py --site exclaim
+python main.py --site rollingstone
+python main.py --site rollingstone --output test.csv
