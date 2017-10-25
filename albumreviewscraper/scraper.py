@@ -52,17 +52,16 @@ def parse_album_review(text, site):
     return Review(date, artist, album, review, rating)
         
         
-def find_review_urls(url, site):
+def find_review_urls(url, site, page=1, max_pages=None):
     """Download URL and search it for album review urls based on the site"""
     text = requests.get(url).text
     # find all review URLs on this page
     for review_url in url_finder(text, site):
         yield review_url
 
-    yield from find_review_urls(next_page(url, site), site)
-
-    # find next page
-
+    if max_pages and page<max_pages:
+        yield from find_review_urls(next_page(url, site), site, 
+                                    page=page+1, max_pages=max_pages)
 
 
 def url_finder(text, site):

@@ -40,6 +40,21 @@ def catalog_to_csv(catalog, output=None, mode="w", delimiter="\t"):
         print(err)
 
 
+class FileStream:
+    def __init__(self, filename, mode="w", delimiter="\t"):
+        self.output = open(filename, mode, encoding="utf-8", newline='')
+        self.writer = csv.writer(self.output, delimiter=delimiter)
+        self.wrote_header = False
+
+    def write_review(self, review):
+        if not self.wrote_header:
+            self.writer.writerow(review.keys())
+            self.wrote_header = True
+        self.writer.writerow(review.as_list())
+
+    def __del__(self):
+        self.output.close()
+
 def print_catalog(catalog):
     """Print a list of reviews to the terminal"""
     if catalog:
