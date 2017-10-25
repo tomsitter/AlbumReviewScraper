@@ -59,7 +59,7 @@ def find_review_urls(url, site):
     for review_url in url_finder(text, site):
         yield review_url
 
-    yield find_review_urls(next_page(url), site)
+    yield find_review_urls(next_page(url, site), site)
 
     # find next page
 
