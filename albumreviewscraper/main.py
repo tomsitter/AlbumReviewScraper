@@ -5,23 +5,26 @@ import sys
 import requests
 
 from config import urls
-from ui import ask_for_input, catalog_to_csv, FileStream
+from util import print_catalog, catalog_to_csv, FileStream, write_review_to_file
 from scraper import find_review_urls, parse_album_review
 
 if sys.version_info[0] < 3:
     raise Exception("Python 3 or a more recent version is required.")
 
 
-def main(site, output=None, max_pages=None, stream=None):
+def main(site, output=None, path="./", max_pages=None, 
+         stream=None, separate_files=None):
     """Main entry to script from command line
     """
     url = urls[site]
     catalog = []
     file_stream = None
 
+    print(f"Path is {path}")
+    print(f"Output is {output} and stream is {stream}")
     if output and stream:
         try:
-            file_stream = FileStream(filename=output)
+            file_stream = FileStream(filename=output, path=path, separate_files=separate_files)
         except IOError as err:
             print(err)
             output = None
@@ -36,12 +39,14 @@ def main(site, output=None, max_pages=None, stream=None):
         else:
             catalog.append(review)
 
+    print('No more reviews found')
+
     if stream:
-        print("Streamed %d reviews to %s" % len(catalog), output)
+        print(f"Streamed {len(catalog)} reviews to {output}")
         return
 
     if catalog:
-        print("Found %d reviews" % len(catalog))
+        print(f"Found {len(catalog)} reviews")
         if output:
             try:
                 catalog_to_csv(catalog, output=output)
@@ -54,6 +59,26 @@ def main(site, output=None, max_pages=None, stream=None):
         print("No reviews found.")
 
 
+def ask_for_input(catalog):
+    """Command line prompt if file fails"""
+    choice = input("Type 'q' to quit, 'p' to print reviews to console, 'a' to write all reviews to individual files, or enter the filename to write all reviews to one file: ")
+    if choice == 'q':
+        sys.exit()
+    elif choice == 'p':
+        print_catalog(catalog)
+    elif choice == 'a':
+        for review in catalog:
+            write_review_to_file(review)
+    else:
+        try:
+            catalog_to_csv(catalog, output=choice)
+            print(f'Wrote {len(catalog)} reviews to {choice}')
+        except IOError as err:
+            print(err)
+    ask_for_input(catalog)
+
+
+
 if __name__ == "__main__":
     """ Parse command line arguments and call main()"""
     import argparse
@@ -63,18 +88,26 @@ if __name__ == "__main__":
                         required=True)
     parser.add_argument("-o", "--output",
                         help="The file to output CSV results to.")
+    parser.add_argument("--path",
+                        help="path to write files to")
     parser.add_argument("--pages",
                         help="The number of pages to scrape before quiting",
                         type=int)
     parser.add_argument("--stream",
-                        help="Specify whether to stream output to file")
+                        help="Specify whether to stream output to file",
+                        action='store_true')
+    parser.add_argument("--sepfiles",
+                        help="Specify whether to write reviews to individual files",
+                        action='store_true')
     args = parser.parse_args()
 
     if args.site:
         main(args.site, 
-             output=args.output, 
+             output=args.output,
+             path=args.path,
              max_pages=args.pages,
-             stream=args.stream)
+             stream=args.stream,
+             separate_files=args.sepfiles)
     else:
         raise ValueError("Missing site name for scraping")
 

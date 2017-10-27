@@ -1,16 +1,16 @@
 """ Album Review Web Scraper in Python 3.6 with BeautifulSoup and Requests"""
+import re
 
 from bs4 import BeautifulSoup
 import requests
 import dateparser
-
-import re
 
 from Review import Review
 
 def parse_album_review(text, site):
     """Return date, artist, album, and body of review for page"""
     soup = BeautifulSoup(text, "html.parser")
+
     if site == "exclaim":
         # artist = article-title
         # album = article-subtitle
@@ -27,13 +27,22 @@ def parse_album_review(text, site):
         
         # title does not hold artist and album in structured way
         title = soup.find("h1", {"class": "content-title"}).get_text()
+        
+        # Work in progress -- use URL instead?
+        # from urllib.parse imprt urlparse
+        # url = soup.find('link', {'rel': 'canonical'}).get('href')
+        # parsed_url = urlparse(url)
+        # # get last part of URL, split it into words, and remove the last word which is some id
+        # # should be left with 
+        # url_title = parsed_url.path.split("/")[-1].split("-")[:-1]
+        # url_title = urltitle.split("-")
 
         if title.startswith("Review:"):
             title = title.lstrip("Review:")
         # if ":" in title:
         #     artist, album = title.strip().split(": ")
         # else:
-        artist, album = title, "parse error"
+        artist, album = title.strip(), ""
 
         # Reviews are nested <p> in the article-content <div>
         # I want to join contents of all <p>s, unescape the HTML, and remove newlines and tabs 
@@ -45,13 +54,13 @@ def parse_album_review(text, site):
         rating = len(soup.select("span.percentage.full"))
         if len(soup.select("span.percentage.half")) == 1:
             rating += 0.5
-        
+            
         if not review:
-            review = "None found"
+            review = ""
 
     return Review(date, artist, album, review, rating)
-        
-        
+       
+    
 def find_review_urls(url, site, page=1, max_pages=None):
     """Download URL and search it for album review urls based on the site"""
     text = requests.get(url).text
@@ -59,7 +68,7 @@ def find_review_urls(url, site, page=1, max_pages=None):
     for review_url in url_finder(text, site):
         yield review_url
 
-    if max_pages and page<max_pages:
+    if max_pages is None or page < max_pages:
         yield from find_review_urls(next_page(url, site), site, 
                                     page=page+1, max_pages=max_pages)
 

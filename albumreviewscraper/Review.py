@@ -26,11 +26,7 @@ class Review:
 
     def as_list(self):
         # returns the items as a list
-        return [self.date,
-                self.artist,
-                self.album,
-                self.review,
-                self.rating]
+        return [self.__getattribute__(key) for key in self.keys()]
 
     @property
     def date(self):
