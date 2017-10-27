@@ -1,6 +1,7 @@
 """ Command-line entry to application """
 
 import sys
+import time
 
 import requests
 
@@ -8,20 +9,18 @@ from config import urls
 from util import print_catalog, catalog_to_csv, FileStream, write_review_to_file
 from scraper import find_review_urls, parse_album_review
 
-if sys.version_info[0] < 3:
-    raise Exception("Python 3 or a more recent version is required.")
+if sys.version_info.major < 3 or sys.version_info.minor < 6:
+    raise Exception("Python 3.6 or a more recent version is required.")
 
 
 def main(site, output=None, path="./", max_pages=None, 
-         stream=None, separate_files=None):
+         stream=None, separate_files=None, timeout=300):
     """Main entry to script from command line
     """
     url = urls[site]
     catalog = []
     file_stream = None
 
-    print(f"Path is {path}")
-    print(f"Output is {output} and stream is {stream}")
     if output and stream:
         try:
             file_stream = FileStream(filename=output, path=path, separate_files=separate_files)
@@ -33,6 +32,7 @@ def main(site, output=None, path="./", max_pages=None,
         print(review_url)
         text = requests.get(review_url).text
         review = parse_album_review(text, site)
+        time.sleep(timeout / 1000.0)
         if file_stream:
             file_stream.write_review(review)
             catalog.append(1)
@@ -99,6 +99,10 @@ if __name__ == "__main__":
     parser.add_argument("--sepfiles",
                         help="Specify whether to write reviews to individual files",
                         action='store_true')
+    parser.add_argument("--timeout",
+                        help="Specify time between page visits in ms, default is 100ms",
+                        default=300,
+                        type=int)
     args = parser.parse_args()
 
     if args.site:
@@ -107,7 +111,8 @@ if __name__ == "__main__":
              path=args.path,
              max_pages=args.pages,
              stream=args.stream,
-             separate_files=args.sepfiles)
+             separate_files=args.sepfiles,
+             timeout=args.timeout)
     else:
         raise ValueError("Missing site name for scraping")
 

@@ -9,12 +9,13 @@ class Review:
     Dates must be datetime.date objects and are serialized to yyyy-mm-dd when queried
     reviews are automatically sanitized of newlines and tabs
     """
-    def __init__(self, date=None, artist=None, album=None, review=None, rating=None):
+    def __init__(self, date=None, author=None, rating=None, artist=None, album=None, review=None):
         self._date = date
+        self.author = author
+        self._rating = rating
         self.artist = artist
         self.album = album
         self.review = review
-        self._rating = rating
 
     @staticmethod
     def sanitize(review):

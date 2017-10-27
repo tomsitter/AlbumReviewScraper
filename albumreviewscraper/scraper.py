@@ -24,6 +24,8 @@ def parse_album_review(text, site):
         date = dateparser.parse(
             soup.find("time", {"class": "content-published-date"}).get_text()
         )
+
+        author = soup.find("a", {"class": "content-author"}).get_text()
         
         # title does not hold artist and album in structured way
         title = soup.find("h1", {"class": "content-title"}).get_text()
@@ -58,7 +60,8 @@ def parse_album_review(text, site):
         if not review:
             review = ""
 
-    return Review(date, artist, album, review, rating)
+    return Review(date=date, author=author, rating=rating, 
+                  artist=artist, album=album, review=review)
        
     
 def find_review_urls(url, site, page=1, max_pages=None):
