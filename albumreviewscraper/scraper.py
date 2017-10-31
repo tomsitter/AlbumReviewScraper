@@ -1,52 +1,16 @@
 """ Album Review Web Scraper in Python 3.6 with BeautifulSoup and Requests"""
+import re
 
 from bs4 import BeautifulSoup
 from bs4.element import Comment
 import requests
-import sys
+import dateparser
 
-if sys.version_info[0] < 3:
-    raise Exception("Python 3 or a more recent version is required.")
+from Review import Review
 
-
-class Review:
-    """Holds review data
-        Noy yet in use
-    """
-    def __init__(self, date, artist, album, review):
-        self.date = date or ""
-        self.artist = artist or ""
-        self.album = album or ""
-        self.review = review or ""
-
-
-urls = {
-    "exclaim": "http://exclaim.ca/music/reviews",
-    "rollingstone": "http://www.rollingstone.com/music/albumreviews",
-}
-
-
-def main(site, output=None):
-    """Main entry to script from command line
-    """
-    url = urls[site]
-
-    for review_url in find_review_urls(url, site):
-        print(review_url)
-        review = requests.get(review_url).content
-        date, artist, album, review = parse_album_review(review, site)
-        # output review to file
-
-def tag_visible(element):
-    if element.parent.name in ['style', 'script', 'head', 'title', 'meta', '[document]']:
-        return False
-    if isinstance(element, Comment):
-        return False
-    return True
-
-def parse_album_review(content, site):
+def parse_album_review(text, site):
     """Return date, artist, album, and body of review for page"""
-    soup = BeautifulSoup(content, "html.parser")
+    soup = BeautifulSoup(text, "html.parser")
 
     if site == "exclaim":
         artist = soup.find("span", {"class": "article-title"}).get_text()
@@ -59,36 +23,65 @@ def parse_album_review(content, site):
     elif site == "rollingstone":
 
         # date will need to be further processed
-        date = soup.find("time", {"class": "content-published-date"}).get_text()
+        date = dateparser.parse(
+            soup.find("time", {"class": "content-published-date"}).get_text()
+        )
+
+        author = soup.find("a", {"class": "content-author"}).get_text()
 
         # title does not hold artist and album in structured way
         title = soup.find("h1", {"class": "content-title"}).get_text()
-        if ":" in title:
-            artist, album = title.split(": ")
-        else:
-            artist, album = title, "parse error"
+
+        # Work in progress -- use URL instead?
+        # from urllib.parse imprt urlparse
+        # url = soup.find('link', {'rel': 'canonical'}).get('href')
+        # parsed_url = urlparse(url)
+        # # get last part of URL, split it into words, and remove the last word which is some id
+        # # should be left with
+        # url_title = parsed_url.path.split("/")[-1].split("-")[:-1]
+        # url_title = urltitle.split("-")
+
+        if title.startswith("Review:"):
+            title = title.lstrip("Review:")
+        # if ":" in title:
+        #     artist, album = title.strip().split(": ")
+        # else:
+        artist, album = title.strip(), ""
 
         # Reviews are nested <p> in the article-content <div>
-        review = "\n".join([p.get_text()
-                            for p in
-                            soup.find("div", {"class": "article-content"}).find_all("p")])
+        # I want to join contents of all <p>s, unescape the HTML, and remove newlines and tabs
+        review = " ".join([
+            p.get_text() for p in
+            soup.find("div", {"class": "article-content"}).find_all("p")
+        ])
+
+        rating = len(soup.select("span.percentage.full"))
+        if len(soup.select("span.percentage.half")) == 1:
+            rating += 0.5
+
         if not review:
-            review = "None found"
+            review = ""
 
-    return date, artist, album, review
+    return Review(date=date, author=author, rating=rating,
+                  artist=artist, album=album, review=review)
 
 
-def find_review_urls(url, site):
+def find_review_urls(url, site, page=1, max_pages=None):
     """Download URL and search it for album review urls based on the site"""
-    content = requests.get(url).content
-    for review_url in url_finder(content, site):
+    text = requests.get(url).text
+    # find all review URLs on this page
+    for review_url in url_finder(text, site):
         yield review_url
 
+    if max_pages is None or page < max_pages:
+        yield from find_review_urls(next_page(url, site), site,
+                                    page=page+1, max_pages=max_pages)
 
-def url_finder(content, site):
-    """Given the contents of a page listing album reviews,
+
+def url_finder(text, site):
+    """Given the texts of a page listing album reviews,
        parse it with BeautifulSoup and return URLs to album reviews"""
-    soup = BeautifulSoup(content, "html.parser")
+    soup = BeautifulSoup(text, "html.parser")
     if site == 'exclaim':
         for article in soup.find_all("li", {"class" : "streamSingle-item"}):
             yield article.find("a").get("href")
@@ -101,18 +94,15 @@ def url_finder(content, site):
         raise ValueError("Unknown site: ", site)
 
 
-if __name__ == "__main__":
-    """ Parse command line arguments and call main()"""
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--site",
-                        help="The site to scrape for reviews. Choices: exclaim, rollingstone",
-                        required=True)
-    parser.add_argument("-o", "--output",
-                        help="The file to output CSV results to.")
-    args = parser.parse_args()
-
-    if args.site:
-        main(args.site, args.output)
-    else:
-        raise ValueError("Missing site name for scraping")
+def next_page(url, site):
+    """Given a URL for a page of album reviews, return the next page"""
+    if site == 'exclaim':
+        raise NotImplementedError()
+    elif site == 'rollingstone':
+        current_page = re.search('page=(\d+)$', url)
+        if not current_page:
+            return url + '?page=2'
+        else:
+            page_number = current_page.groups()[0]
+            page_digits = len(page_number)
+            return url[:-page_digits] + str(int(page_number) + 1)
