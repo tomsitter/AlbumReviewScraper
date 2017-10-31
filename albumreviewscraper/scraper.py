@@ -15,10 +15,12 @@ def parse_album_review(text, site):
     if site == "exclaim":
         artist = soup.find("span", {"class": "article-title"}).get_text()
         album = soup.find("span", {"class": "article-subtitle"}).get_text()
-        date = soup.find("div", {"class": "article-published"}).get_text()
-        texts = soup.findAll(text=True)
-        review = filter(tag_visible, texts) # More filtering required still
-        return date, artist, album, review
+        date = dateparser.parse(
+            soup.find("div", {"class": "article-published"}).get_text()[10:]
+        )
+        review = soup.find("div", {"class": "article"}).get_text().splitlines()
+        author = soup.find("div", {"class": "article-author"}).get_text()[3:]
+        rating = ''
 
     elif site == "rollingstone":
 
