@@ -1,8 +1,8 @@
 """Utility functions for printing reviews and writing them to files"""
 
 import csv
-import os
 import re
+from pathlib import Path
 
 
 class FileStream:
@@ -16,9 +16,9 @@ class FileStream:
         self.path = path
         self.filename=filename
         if filename:
-            filepath = os.path.join("./", path, filename)
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            self.output = open(filepath, mode, encoding="utf-8", newline='')
+            filepath = Path.cwd() / path
+            filepath.mkdir(parents=True, exist_ok=True)
+            self.output = (filepath / filename).open(mode, encoding="utf-8", newline='')
             self.writer = csv.writer(self.output, delimiter=delimiter)
         else:
             self.output = None
@@ -63,12 +63,12 @@ def write_review_to_file(review, mode="w", path="./"):
     filename = "_".join([review.date,
                          review.artist,
                          review.album]).strip("_") + ".txt"
-    # sanitize
+    # sanitize odd characters
     filename = re.sub('[^\w\-_\. ]', '_', filename)
     try:
-        filepath = os.path.join("./", path, filename)
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        with open(filepath, mode, encoding="utf-8", newline='') as out:
+        filepath = Path.cwd() / path
+        filepath.mkdir(parents=True, exist_ok=True)
+        with (filepath / filename).open(mode, encoding="utf-8", newline='') as out:
             out.write(review.review)
     except IOError as err:
         print(err)
