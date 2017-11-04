@@ -8,6 +8,7 @@ import dateparser
 
 from Review import Review
 
+
 def parse_album_review(text, site):
     """Return date, artist, album, and body of review for page"""
     soup = BeautifulSoup(text, "html.parser")
@@ -17,12 +18,16 @@ def parse_album_review(text, site):
             soup.find("div", {"class": "article-published"}).get_text()[10:]
         )
         author = soup.find("div", {"class": "article-author"}).get_text()[3:]
-        rating = soup.find("div", {"class": "article-rating"}).get_text()
+        try:  # Some reviews don't have ratings
+            rating = soup.find("div", {"class": "article-rating"}).get_text()
+        except AttributeError as err:
+            rating = ''
         artist = soup.find("span", {"class": "article-title"}).get_text()
         album = soup.find("span", {"class": "article-subtitle"}).get_text()
-        review_full = soup.find("div", {"class": "article"}).get_text()
-        review_split = re.split('(\n[0-9]\n)', review_full)[2]
-        review = re.split('(\([^()]+\)\n\n)', review_split)[0]
+        review = soup.find("div", {"class": "article"}).get_text()
+        if rating != '':
+            review = re.split('(\n[0-9]\n)', review)[2]
+        review = re.split('(\([^()]+\)\n\n)', review)[0]
 
     elif site == "rollingstone":
 
@@ -87,7 +92,7 @@ def url_finder(text, site):
        parse it with BeautifulSoup and return URLs to album reviews"""
     soup = BeautifulSoup(text, "html.parser")
     if site == 'exclaim':
-        for article in soup.find_all("li", {"class" : "streamSingle-item"}):
+        for article in soup.find_all("li", {"class": "streamSingle-item"}):
             yield article.find("a").get("href")
 
     elif site == 'rollingstone':
@@ -101,12 +106,13 @@ def url_finder(text, site):
 def next_page(url, site):
     """Given a URL for a page of album reviews, return the next page"""
     if site == 'exclaim':
-        raise NotImplementedError()
+        current_page = re.search('page/(\d+)$', url)
+        if not current_page:
+            return url + '/page/2'
     elif site == 'rollingstone':
         current_page = re.search('page=(\d+)$', url)
         if not current_page:
             return url + '?page=2'
-        else:
-            page_number = current_page.groups()[0]
-            page_digits = len(page_number)
-            return url[:-page_digits] + str(int(page_number) + 1)
+        page_number = current_page.groups()[0]
+        page_digits = len(page_number)
+        return url[:-page_digits] + str(int(page_number) + 1)
