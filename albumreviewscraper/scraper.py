@@ -13,14 +13,16 @@ def parse_album_review(text, site):
     soup = BeautifulSoup(text, "html.parser")
 
     if site == "exclaim":
-        artist = soup.find("span", {"class": "article-title"}).get_text()
-        album = soup.find("span", {"class": "article-subtitle"}).get_text()
         date = dateparser.parse(
             soup.find("div", {"class": "article-published"}).get_text()[10:]
         )
-        review = soup.find("div", {"class": "article"}).get_text().splitlines()
         author = soup.find("div", {"class": "article-author"}).get_text()[3:]
-        rating = ''
+        rating = soup.find("div", {"class": "article-rating"}).get_text()
+        artist = soup.find("span", {"class": "article-title"}).get_text()
+        album = soup.find("span", {"class": "article-subtitle"}).get_text()
+        review_full = soup.find("div", {"class": "article"}).get_text()
+        review_split = re.split('(\n[0-9]\n)', review_full)[2]
+        review = re.split('(\([^()]+\)\n\n)', review_split)[0]
 
     elif site == "rollingstone":
 
