@@ -2,6 +2,7 @@
 import re
 
 from bs4 import BeautifulSoup
+from bs4.element import Comment
 import requests
 import dateparser
 
@@ -12,12 +13,17 @@ def parse_album_review(text, site):
     soup = BeautifulSoup(text, "html.parser")
 
     if site == "exclaim":
-        # artist = article-title
-        # album = article-subtitle
-        # date = article-published "Published Oct 23, 2017"
-        # body = *not wrapped in anything*
-        date, artist, album, review = "", "", "", ""
-        raise NotImplementedError("Exclaim! is not yet supported")
+        date = dateparser.parse(
+            soup.find("div", {"class": "article-published"}).get_text()[10:]
+        )
+        author = soup.find("div", {"class": "article-author"}).get_text()[3:]
+        rating = soup.find("div", {"class": "article-rating"}).get_text()
+        artist = soup.find("span", {"class": "article-title"}).get_text()
+        album = soup.find("span", {"class": "article-subtitle"}).get_text()
+        review_full = soup.find("div", {"class": "article"}).get_text()
+        review_split = re.split('(\n[0-9]\n)', review_full)[2]
+        review = re.split('(\([^()]+\)\n\n)', review_split)[0]
+
     elif site == "rollingstone":
 
         # date will need to be further processed
@@ -26,16 +32,16 @@ def parse_album_review(text, site):
         )
 
         author = soup.find("a", {"class": "content-author"}).get_text()
-        
+
         # title does not hold artist and album in structured way
         title = soup.find("h1", {"class": "content-title"}).get_text()
-        
+
         # Work in progress -- use URL instead?
         # from urllib.parse imprt urlparse
         # url = soup.find('link', {'rel': 'canonical'}).get('href')
         # parsed_url = urlparse(url)
         # # get last part of URL, split it into words, and remove the last word which is some id
-        # # should be left with 
+        # # should be left with
         # url_title = parsed_url.path.split("/")[-1].split("-")[:-1]
         # url_title = urltitle.split("-")
 
@@ -47,23 +53,23 @@ def parse_album_review(text, site):
         artist, album = title.strip(), ""
 
         # Reviews are nested <p> in the article-content <div>
-        # I want to join contents of all <p>s, unescape the HTML, and remove newlines and tabs 
+        # I want to join contents of all <p>s, unescape the HTML, and remove newlines and tabs
         review = " ".join([
-            p.get_text() for p in 
+            p.get_text() for p in
             soup.find("div", {"class": "article-content"}).find_all("p")
         ])
 
         rating = len(soup.select("span.percentage.full"))
         if len(soup.select("span.percentage.half")) == 1:
             rating += 0.5
-            
+
         if not review:
             review = ""
 
-    return Review(date=date, author=author, rating=rating, 
+    return Review(date=date, author=author, rating=rating,
                   artist=artist, album=album, review=review)
-       
-    
+
+
 def find_review_urls(url, site, page=1, max_pages=None):
     """Download URL and search it for album review urls based on the site"""
     text = requests.get(url).text
@@ -72,12 +78,12 @@ def find_review_urls(url, site, page=1, max_pages=None):
         yield review_url
 
     if max_pages is None or page < max_pages:
-        yield from find_review_urls(next_page(url, site), site, 
+        yield from find_review_urls(next_page(url, site), site,
                                     page=page+1, max_pages=max_pages)
 
 
 def url_finder(text, site):
-    """Given the texts of a page listing album reviews, 
+    """Given the texts of a page listing album reviews,
        parse it with BeautifulSoup and return URLs to album reviews"""
     soup = BeautifulSoup(text, "html.parser")
     if site == 'exclaim':
