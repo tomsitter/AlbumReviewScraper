@@ -93,7 +93,7 @@ def url_finder(text, site):
     soup = BeautifulSoup(text, "html.parser")
     if site == 'exclaim':
         for article in soup.find_all("li", {"class": "streamSingle-item"}):
-            yield article.find("a").get("href")
+            yield 'https://exclaim.ca' + article.find("a").get("href")
 
     elif site == 'rollingstone':
         for article in soup.find_all("a", {"class": "content-card-link"}):
