@@ -113,6 +113,6 @@ def next_page(url, site):
         current_page = re.search('page=(\d+)$', url)
         if not current_page:
             return url + '?page=2'
-        page_number = current_page.groups()[0]
-        page_digits = len(page_number)
-        return url[:-page_digits] + str(int(page_number) + 1)
+    page_number = current_page.groups()[0]
+    page_digits = len(page_number)
+    return url[:-page_digits] + str(int(page_number) + 1)
