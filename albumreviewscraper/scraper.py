@@ -23,10 +23,16 @@ def parse_album_review(text, site):
         except AttributeError as err:
             rating = ''
         artist = soup.find("span", {"class": "article-title"}).get_text()
-        album = soup.find("span", {"class": "article-subtitle"}).get_text()
+        try:
+            album = soup.find("span", {"class": "article-subtitle"}).get_text()
+        except AttributeError as err:
+            album = ''
         review = soup.find("div", {"class": "article"}).get_text()
         if rating != '':
-            review = re.split('(\n[0-9]\n)', review)[2]
+            try:
+                review = re.split('(\n\d{1,2}\n)', review)[2]
+            except IndexError as err:
+                pass
         review = re.split('(\([^()]+\)\n\n)', review)[0]
 
     elif site == "rollingstone":
